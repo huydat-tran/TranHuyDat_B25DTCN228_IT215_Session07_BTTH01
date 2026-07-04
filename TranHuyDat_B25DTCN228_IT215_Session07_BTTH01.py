@@ -51,11 +51,6 @@ def success_response(
     }
 
 
-# ==========================================
-# EXCEPTION HANDLERS (BẪY LỖI)
-# ==========================================
-
-
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
@@ -71,7 +66,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-# Vẫn giữ StarletteHTTPException ở đây để tóm gọn CẢ lỗi của FastAPI và lỗi ngầm của framework
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
@@ -102,11 +96,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# ==========================================
-# SCHEMAS & DATABASE (MOCK)
-# ==========================================
-
-
 class CarrierCreate(BaseModel):
     code: str = Field(..., min_length=1)
     name: str = Field(..., min_length=3)
@@ -117,7 +106,7 @@ class CarrierCreate(BaseModel):
 class ShipmentCreate(BaseModel):
     carrier_id: int
     order_reference: str = Field(..., min_length=1)
-    total_weight: int = Field(..., gt=0)  # Đã sửa lỗi đánh máy = int = thành : int =
+    total_weight: int = Field(..., gt=0)
     dispatch_date: date
     shift: WorkShift
 
@@ -168,15 +157,9 @@ def get_carrier_by_code(carrier_code: str):
     )
 
 
-# ==========================================
-# ROUTES
-# ==========================================
-
-
 @app.post("/carriers", response_model=EnvelopeResponse[dict])
 def create_carrier(carrier: CarrierCreate, request: Request):
     if get_carrier_by_code(carrier.code):
-        # Dùng HTTPException của FastAPI để ném lỗi
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Mã đối tác đã tồn tại"
         )
@@ -194,14 +177,11 @@ def create_carrier(carrier: CarrierCreate, request: Request):
     )
 
 
-# Đã fix Response Model thành List[dict]
 @app.get("/carriers", response_model=EnvelopeResponse[List[dict]])
 def get_all_carriers(
     request: Request,
     keyword: Optional[str] = None,
-    status_query: Optional[
-        CarrierStatus
-    ] = None,  # Đổi tên biến để tránh nhầm với thư viện 'status'
+    status_query: Optional[CarrierStatus] = None,
     min_weight: Optional[int] = Query(None, gt=0),
 ):
     filtered_carriers = carriers_db
@@ -313,7 +293,6 @@ def create_shipment(shipment: ShipmentCreate, request: Request):
 
     new_id = 1 if not shipments_db else max(s["id"] for s in shipments_db) + 1
 
-    # Khởi tạo siêu gọn gàng nhờ Pydantic mode='json'
     new_shipment = {"id": new_id, **shipment.model_dump(mode="json")}
     shipments_db.append(new_shipment)
 
